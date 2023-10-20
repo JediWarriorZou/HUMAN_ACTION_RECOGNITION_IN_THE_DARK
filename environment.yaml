@@ -11,7 +11,7 @@ dependencies:
   - numpy = 1.23.1 
   - pip:
     - opencv-python==4.6.0.66
-    - sklearn
+    - scikit-learn
     - tqdm 
     - pandas
     - matplotlib

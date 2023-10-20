@@ -2,6 +2,16 @@ import torchvision
 import cv2
 import random
 import math
+import torch
+import torchvision.transforms as transforms
+import numpy as np
+
+from torch import Tensor as ts
+from torchvision.models import vgg16, VGG16_Weights
+from video_dataset import Video_Dataset
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
 #frame_num=varied
 #fps=30
 #width=320
@@ -16,7 +26,7 @@ def frame_sampling(type, path, sp_rate):
             ret, frame = v_capture.read()
             if ret:
                 if c % sp_rate == 0:
-                   frame_list.append(frame)
+                   frame_list.append(cv2.resize(frame,(224,224)))
                 c += 1
             else:
                 break
@@ -39,16 +49,74 @@ def frame_sampling(type, path, sp_rate):
         for i in range(select_num):
             v_capture.set(cv2.CAP_PROP_POS_FRAMES, idx_list[i])
             ret, frame = v_capture.read()
-            frame_list.append(frame)
+            frame_list.append(cv2.resize(frame,(224,224)))
         v_capture.release()
         
-    return frame_list
-        
-             
-               
-           
+    return frame_list 
 
-video_path = 'data/train/Jump/Jump_8_7.mp4'
+def late_fusion(frame_list):
+    feature_list = []
+    preprocess = transforms.Compose([
+
+    transforms.ToTensor(),
+    transforms.Normalize(mean = [0.07, 0.07, 0.07], std = [0.1, 0.09, 0.08])
+    ])
+    model = vgg16(weights = VGG16_Weights.IMAGENET1K_V1)
+    model.eval()
+    
+    for i in range(len(frame_list)):
+        frame = frame_list[i]
+        frame = preprocess(frame)
+        frame = frame.unsqueeze(0)
+        with torch.no_grad():
+            feature = model.features(frame)
+        feature_list.append(feature)
+    fusion = torch.sum(torch.stack(feature_list), dim=0)/len(feature_list)
+    
+    return fusion
+             
+if __name__ == '__main__':
+    print('-----Training Begin-----')
+    train_set = Video_Dataset('data/train','data/train.txt')
+    train_feature_set = []
+    print('-----Feature Extraction-----')
+    for i in range(len(train_set)):
+        path, _ = train_set[i]
+        frame_list = frame_sampling('uniform', path, 10)
+        feature = late_fusion(frame_list)
+        train_feature_set.append((feature.view(-1)).numpy())
+    
+    train_feature_set = np.array(train_feature_set)
+    
+    print('-----Training SVM Begin-----')
+    clf = SVC(kernel='linear')
+    clf.fit(train_feature_set, train_set.label_list)
+    
+    print('-----Testinging Begin-----')
+    test_set = Video_Dataset('data/validate','data/validate.txt')
+    test_feature_set = []
+    print('-----Feature Extraction-----')
+    for i in range(len(test_set)):
+        path, _ = test_set[i]
+        frame_list = frame_sampling('uniform', path, 10)
+        feature = late_fusion(frame_list)
+        test_feature_set.append((feature.view(-1)).numpy())
+    
+    test_feature_set = np.array(test_feature_set)
+    print('-----Inference-----')
+    y_pred = clf.predict(test_feature_set)
+    
+    accuracy = accuracy_score(test_set.label_list, y_pred)
+    confusion = confusion_matrix(test_set.label_list, y_pred)
+    report = classification_report(test_set.label_list, y_pred)
+
+    print(f'Accuracy: {accuracy}')
+    print(f'Confusion Matrix:\n{confusion}')
+    print(f'Classification Report:\n{report}')
+    
+    
+    
+    
 
 
 
