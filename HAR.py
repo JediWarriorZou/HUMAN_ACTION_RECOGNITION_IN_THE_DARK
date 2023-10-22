@@ -27,12 +27,12 @@ def parse_args():
         default= 'uniform',
         help="sampling method"
     )
+    
     opt = parser.parse_args()
     return opt
 
 if __name__ == '__main__':
     opt = parse_args()
-    
     print('-----Training Begin-----')
     train_set = Video_Dataset('data/train','data/train.txt')
     train_feature_set = []
@@ -40,10 +40,10 @@ if __name__ == '__main__':
     for i in range(len(train_set)):
         path, _ = train_set[i]
         if opt.enhancement:
-            frame_list = frame_sampling_enhancement(opt.sample, path, 10)
+            frame_list = frame_sampling_enhancement(opt.sample, path, 10, (256,256))
             feature = late_fusion(frame_list, mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])
         else: 
-            frame_list = frame_sampling(opt.sample, path, 10)
+            frame_list = frame_sampling(opt.sample, path, 10, (256,256))
             feature = late_fusion(frame_list, mean = [0.07, 0.07, 0.07], std = [0.1, 0.09, 0.08])
         train_feature_set.append((feature.view(-1)).numpy())
     
@@ -60,10 +60,10 @@ if __name__ == '__main__':
     for i in range(len(test_set)):
         path, _ = test_set[i]
         if opt.enhancement:
-            frame_list = frame_sampling_enhancement(opt.sample, path, 10)
+            frame_list = frame_sampling_enhancement(opt.sample, path, 10, (256,256))
             feature = late_fusion(frame_list, mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])
         else: 
-            frame_list = frame_sampling(opt.sample, path, 10)
+            frame_list = frame_sampling(opt.sample, path, 10, (256,256))
             feature = late_fusion(frame_list, mean = [0.07, 0.07, 0.07], std = [0.1, 0.09, 0.08])
         test_feature_set.append((feature.view(-1)).numpy())
     

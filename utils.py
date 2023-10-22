@@ -10,7 +10,7 @@ from torch import Tensor as ts
 from torchvision.models import resnet50, ResNet50_Weights
 
 
-def frame_sampling(type, path, sp_rate):
+def frame_sampling(type, path, sp_t, resize):
     v_capture = cv2.VideoCapture(path)
     frame_list = []
     if type =='uniform':
@@ -18,8 +18,8 @@ def frame_sampling(type, path, sp_rate):
         while (True):
             ret, frame = v_capture.read()
             if ret:
-                if c % sp_rate == 0:
-                   frame_list.append(cv2.resize(frame,(256,256)))
+                if c % sp_t == 0:
+                   frame_list.append(cv2.resize(frame, resize))
                 c += 1
             else:
                 break
@@ -28,7 +28,7 @@ def frame_sampling(type, path, sp_rate):
     if  type =='random':
         idx_list = []
         frame_num = int(v_capture.get(cv2.CAP_PROP_FRAME_COUNT))
-        select_num = math.floor(frame_num / sp_rate)
+        select_num = math.floor(frame_num / sp_t)
         while True:
             frame_index = random.randint(1, frame_num + 1)
             v_capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
@@ -46,11 +46,11 @@ def frame_sampling(type, path, sp_rate):
         for i in range(select_num):
             v_capture.set(cv2.CAP_PROP_POS_FRAMES, idx_list[i])
             ret, frame = v_capture.read()
-            frame_list.append(cv2.resize(frame,(256,256)))
+            frame_list.append(cv2.resize(frame, resize))
         v_capture.release()
     return frame_list 
 
-def frame_sampling_enhancement(type, path, sp_rate):
+def frame_sampling_enhancement(type, path, sp_rate, resize):
     v_capture = cv2.VideoCapture(path)
     frame_list = []
     if type =='uniform':
@@ -61,7 +61,7 @@ def frame_sampling_enhancement(type, path, sp_rate):
                 if c % sp_rate == 0:
                    enhancor = LIME(img = frame / 255)
                    _ = enhancor.optimizeIllumMap()
-                   frame_list.append(cv2.resize(enhancor.enhance(),(256,256)))
+                   frame_list.append(cv2.resize(enhancor.enhance(), resize))
                 c += 1
             else:
                 break
@@ -90,7 +90,7 @@ def frame_sampling_enhancement(type, path, sp_rate):
             ret, frame = v_capture.read()
             enhancor = LIME(img = frame / 255)
             _ = enhancor.optimizeIllumMap()
-            frame_list.append(cv2.resize(enhancor.enhance(),(256,256)))
+            frame_list.append(cv2.resize(enhancor.enhance(), resize))
         v_capture.release()
     return frame_list 
 
